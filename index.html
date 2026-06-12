@@ -204,11 +204,13 @@
       border-radius: 0.7rem;
       border: 1px solid rgba(1,105,111,0.12);
       pointer-events: none;
+      z-index: 2;
     }
     .card.is-center  { transform: translateY(-6px) rotate(-1deg); }
     .card.is-left    { transform: translateY(3px) rotate(-10deg); }
     .card.is-right   { transform: translateY(3px) rotate(9deg); }
     .card:hover      { transform: translateY(-10px) rotate(0deg) scale(1.02); box-shadow: 0 26px 46px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.9) inset; filter: saturate(1.08); }
+    /* card back (default, no image) */
     .card-inner-pattern {
       position: absolute; inset: 0;
       background:
@@ -227,6 +229,17 @@
       box-shadow: 0 8px 18px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.9) inset;
     }
     .card-symbol svg { width: 70%; height: 70%; color: var(--color-primary); }
+    /* card face image */
+    .card-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 0.9rem;
+      z-index: 1;
+    }
+    .card-img.reversed { transform: rotate(180deg); }
     .card-label {
       position: absolute; bottom: 0.55rem; left: 0; right: 0;
       text-align: center;
@@ -235,7 +248,12 @@
       text-transform: uppercase;
       color: rgba(0,0,0,0.45);
       font-weight: 500;
+      z-index: 3;
     }
+    /* when card is revealed, hide the symbol layer */
+    .card.revealed .card-inner-pattern,
+    .card.revealed .card-symbol { opacity: 0; }
+    .card.revealed .card-label { color: rgba(255,255,255,0.85); text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
     .table-caption {
       margin-top: var(--space-3);
       font-size: var(--text-xs);
@@ -356,12 +374,12 @@
                 </div>
                 <div class="card-label">聽鳥兒說</div>
               </div>
-              <div class="card is-center" aria-label="鳥兒塔羅卡背">
+              <div class="card is-center" id="centerCard" aria-label="鳥兒塔羅卡背">
                 <div class="card-inner-pattern"></div>
                 <div class="card-symbol">
                   <svg viewBox="0 0 64 64"><path d="M16 39c7-3 11-8 14-16 5 7 11 10 19 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M22 45c5-4 9-6 13-8 6-3 10-6 13-11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="40" cy="16" r="3.3" fill="currentColor"/></svg>
                 </div>
-                <div class="card-label">抽一張牌</div>
+                <div class="card-label" id="centerCardLabel">抽一張牌</div>
               </div>
               <div class="card is-right" aria-hidden="true">
                 <div class="card-inner-pattern"></div>
@@ -416,29 +434,35 @@
   </main>
 
   <script>
+    // 牌卡資料，image 對應 cards/ 資料夾的圖檔名稱（沒有圖則顯示符號）
     const cards = [
       {
         name: "愚者 The Fool", keyword: "踏出去的第一步",
+        image: null,
         upright: "今天的你，像剛飛出巢的小鳥——有一點笨拙，但那正是可貴之處。愚者不是傻，而是願意在不知道結果的情況下，先相信自己一步。也許別人看不懂你現在的選擇，但只要那一步讓你覺得胸口有一點點發亮，那就不是錯路。",
         reversed: "現在的你，很想裝作若無其事地往前衝，好像什麼都不怕。但鳥兒聽見你心裡其實有在抖。逆位的愚者提醒你：不是每一個「不管了啦」都叫勇氣，有些只是逃避。先停下來，幫自己確認一下：你是為了靠近喜歡的東西，還是只是想離開不舒服的地方？"
       },
       {
         name: "隱者 The Hermit", keyword: "安靜裡的微光",
+        image: null,
         upright: "你可能覺得自己最近有點退開，有點不想吵鬧，也不太想解釋。但隱者說：這不是你變得冷淡，而是你正在把耳朵收回來，專心聽自己的聲音。現在不是拼命對外證明什麼的時候，先答應自己：可以慢一點，晚一點回訊息，慢一點做決定。",
         reversed: "你曾經把自己關起來，是為了療傷或整理心情，但現在那扇門好像關太久，變成一種習慣。逆位的隱者提醒你：如果你開始覺得外面的世界都很吵、很麻煩、很懶得回應，其實是因為你也在想『如果出去，會不會又受傷』。鳥兒想說：你可以試著先對一個人打開一點點窗，不需要一次把門打到全開。"
       },
       {
         name: "太陽 The Sun", keyword: "被看見的快樂",
+        image: "19-sun.jpg",
         upright: "這張牌說：你其實有權利「很快樂」，也有資格被愛得理所當然。太陽提醒你，不需要一直把自己的光調到最暗才安全。今天很適合做一件讓自己真心覺得爽的事，不是為了績效，也不是為了別人的眼光，就只是單純覺得：啊，這樣的自己好可愛。",
         reversed: "你正在逼自己笑，或是假裝沒事到連自己都快以為『真的沒事』。逆位的太陽不是沒有光，而是光被關在心裡。你可以承認：我其實有一點失望、有一點受傷、有一點不甘願。這些感受不會讓你變得不好相處，只會讓你變得更真實。"
       },
       {
         name: "星星 The Star", keyword: "療癒之後的光",
+        image: null,
         upright: "星星是走過黑暗之後才出現的牌。它不是說你「現在就要好了」，而是說：你一直都還在，這件事本身就很了不起。今天的你，可以允許自己多休息一點，不需要比昨天的你更強壯，只要還在就夠了。",
         reversed: "你很想相信事情會好轉，但心底有個聲音一直在說「算了吧，反正也不會」。逆位的星星不是否定你，而是說：你這個懷疑本身，就是你太累了的證明。先把懷疑放在一旁，今天只做一件讓自己覺得被善待的事。"
       },
       {
         name: "戀人 The Lovers", keyword: "真正想要的那個",
+        image: null,
         upright: "戀人這張牌說的不只是愛情，而是「你選擇與什麼同在」。現在的你，正面對一個需要從心選擇的時刻——不是誰說什麼比較對，而是哪一邊讓你的心覺得更像自己。聽那個感覺，它比任何建議都準。",
         reversed: "你可能正在做一個你說服自己要做、但其實心裡不太對勁的決定。逆位的戀人提醒你：那個「但是……」的感覺不是矯情，是訊號。不需要現在就有答案，但可以先停下來問問自己：這個選擇，是真的要，還是只是不想讓誰失望？"
       }
@@ -452,7 +476,8 @@
     const readingText = document.getElementById("readingText");
     const readingNote = document.getElementById("readingNote");
     const cardElements = document.querySelectorAll(".card");
-    const centerCard = document.querySelector(".card.is-center");
+    const centerCard = document.getElementById("centerCard");
+    const centerCardLabel = document.getElementById("centerCardLabel");
     const tabletop = document.querySelector(".tabletop");
 
     function drawCard() {
@@ -468,6 +493,28 @@
       el.classList.add("shimmer");
     }
 
+    function showCardImage(card, upright) {
+      // Remove any existing image
+      const existing = centerCard.querySelector(".card-img");
+      if (existing) existing.remove();
+
+      if (card.image) {
+        const img = document.createElement("img");
+        img.src = "./cards/" + card.image;
+        img.alt = card.name;
+        img.className = "card-img" + (upright ? "" : " reversed");
+        img.loading = "lazy";
+        img.width = 115;
+        img.height = 192;
+        centerCard.appendChild(img);
+        centerCard.classList.add("revealed");
+        centerCardLabel.textContent = card.name.split(" ")[0];
+      } else {
+        centerCard.classList.remove("revealed");
+        centerCardLabel.textContent = "抽一張牌";
+      }
+    }
+
     function handleDraw() {
       const { card, upright } = drawCard();
       applyShimmer(readingTitle);
@@ -479,6 +526,7 @@
       const angle = (Math.random() - 0.5) * 6;
       const lift = 10 + Math.random() * 6;
       centerCard.style.transform = `translateY(-${lift}px) rotate(${angle}deg)`;
+      showCardImage(card, upright);
       const dir = upright ? "正位" : "逆位";
       readingTagline.textContent = "鳥兒替你叼來的，是這一張：";
       readingTitle.innerHTML = `<span class="reading-card-name">${card.name}</span>｜${card.keyword}（${dir}）`;
@@ -489,6 +537,10 @@
 
     function handleReset() {
       centerCard.style.transform = "";
+      centerCard.classList.remove("revealed");
+      const existing = centerCard.querySelector(".card-img");
+      if (existing) existing.remove();
+      centerCardLabel.textContent = "抽一張牌";
       readingTagline.textContent = "先閉上眼，讓心靜一秒。";
       readingTitle.textContent = "今天的風，還在等你的問題。";
       readingMeta.textContent = "尚未抽牌";
